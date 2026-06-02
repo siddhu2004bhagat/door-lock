@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Lock Controller</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 320px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #f1f5f9;
+        }
+
+        /* 3D Door Animation Container */
+        .door-frame {
+            width: 120px;
+            height: 180px;
+            border: 4px solid #475569;
+            border-bottom: none;
+            margin: 0 auto 2.5rem auto;
+            position: relative;
+            background: #334155;
+            perspective: 400px; /* Gives 3D depth */
+        }
+
+        .door {
+            width: 100%;
+            height: 100%;
+            background: #ef4444; /* Red locked door */
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: left center; /* Hinges on the left side */
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+            box-sizing: border-box;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        .door-handle {
+            width: 12px;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Animated Active States */
+        .door-frame.open .door {
+            transform: rotateY(-110deg);
+            background: #10b981; /* Green unlocked door */
+        }
+
+        /* Action Button */
+        .trigger-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4);
+        }
+
+        .trigger-btn:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .trigger-btn:disabled {
+            background-color: #64748b;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .status-text {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Gate Kholo Yantra</h1>
+        
+        <div class="door-frame" id="doorFrame">
+            <div class="door">
+                <div class="door-handle"></div>
+            </div>
+        </div>
+
+        <button class="trigger-btn" id="triggerBtn" onclick="triggerSystem()">OPEN GATE </button>
+        <div class="status-text" id="statusText">System Ready</div>
+    </div>
+
+    <script>
+        // Firebase Configuration URL 
+        // Note: We target the specific path directly via REST API endpoints
+        const FIREBASE_URL = "https://door-lock-6c6c3-default-rtdb.firebaseio.com/servoState.json?auth=TyceoWDzSaPWiH355t7VhpBHKordiL9AxkmCnS0W";
+
+        async function triggerSystem() {
+            const button = document.getElementById('triggerBtn');
+            const doorFrame = document.getElementById('doorFrame');
+            const statusText = document.getElementById('statusText');
+
+            // UI Adjustments while performing operations
+            button.disabled = true;
+            statusText.innerText = "Sending command...";
+
+            try {
+                // Send '1' down to Firebase using a PUT request
+                const response = await fetch(FIREBASE_URL, {
+                    method: 'PUT',
+                    body: JSON.stringify(1),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    statusText.innerText = "Action Active!";
+                    doorFrame.classList.add('open'); // Fire the CSS 3D door swing
+
+                    // Match your hardware loop timeframe (1 second switch delay + 500ms safety window)
+                    setTimeout(() => {
+                        doorFrame.classList.remove('open'); // Swing door closed back up visually
+                        button.disabled = false;
+                        statusText.innerText = "System Ready";
+                    }, 2500);
+
+                } else {
+                    throw new Error("Server rejected request");
+                }
+
+            } catch (error) {
+                console.error("Error updating Firebase:", error);
+                statusText.innerText = "Failed to connect!";
+                button.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
